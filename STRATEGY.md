@@ -91,16 +91,35 @@ overstate live performance — see NOTES.md for the honest caveat.
   harness client is fixed. No effort spent there.
 - **Cosmetic README/docs changes.** No score impact; skipped.
 
-## Expected outcomes
+## Expected outcomes (measured, 19 Nov 2026)
 
-- Feature 600 and agent 200 in every trial (all 120 conformance checks +
-  15 MCP checks pass; the smoke test in `tests/smoke.mjs` covers the same
-  surfaces with a real git client).
-- Local perf ≥198/200 (per-workload p50 at or under the targets above),
-  which the ×2.55 live model maps to ≥156 live → score ≥956.
-- Determinism: two grade-local runs produce byte-identical results.
-- If a verification step fails and cannot be fixed by rewriting this
-  entry's own code, that is reported as a failure, not papered over.
+- Feature 600 and agent 200 in every trial — achieved in all 3
+  grade-local trials and in every direct conformance run (all 120 +
+  15 checks pass; the smoke test covers the same surfaces with a real
+  git client).
+- Local perf: median 190/200 across 3 grade-local trials (197/190/189);
+  direct `--perf` runs 197 and 191. The 198 local target was NOT met.
+  Per-workload medians: push ~313 ms, clone ~77 ms, read ~663 ms,
+  write ~97 ms (targets: ≤207 / ≤68 / ≤520 / ≤60). Clone and read are
+  much faster than v3 (95 ms and 729 ms); push and write are at v3's
+  level (289 ms and 84 ms) within VM noise.
+- Live projection via the ×2.55 model: ~134 perf → score ~934, below
+  the 956 target. The shortfall is in the client-dominated workloads:
+  profiling shows the server at ~23–25 µs/request (read/write) and
+  ~282 µs/push, while the bench numbers are ~85–90% harness-client
+  time (verified against a canned zero-work server: the kit client
+  still takes ~3.4 ms/push). Server micro-optimization can gain at
+  most ~1–2 live points; the targets would need a faster harness
+  client, which the entry cannot change.
+- Determinism: conformance results are byte-identical across runs;
+  perf times vary ±20% (shared-VM noise), as expected for timing.
+- Two conformance bugs found and fixed in this session: (1) annotated
+  tag objects were missing from clone packs (`planFetch` only seeded
+  commit wants); (2) merge-conflict used the PR's creation-time
+  `baseSha` instead of the live base-branch tip, so a PR conflicted
+  only after another PR merged was reported 200 instead of 405.
+  Both fixed centrally (`mergePR` with live tip; tag seeding) across
+  REST, GraphQL, and MCP, and verified by the full conformance run.
 
 ## Risks
 
